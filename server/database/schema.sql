@@ -16,9 +16,10 @@ CREATE TABLE IF NOT EXISTS developers (
 CREATE TABLE IF NOT EXISTS api_keys (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   developer_id UUID NOT NULL REFERENCES developers(id) ON DELETE CASCADE,
+  name TEXT NOT NULL DEFAULT 'My API Key', -- Human readable name
   key_prefix TEXT NOT NULL, -- First 8 chars, e.g., 'dv_92af'
   api_key_hash TEXT NOT NULL UNIQUE, -- SHA-256 hash of full key
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'revoked')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'revoked', 'deleted')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
