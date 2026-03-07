@@ -1,0 +1,131 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Keys | DecentraVault</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      display: none; align-items: center; justify-content: center;
+      z-index: 10000;
+      backdrop-filter: blur(4px);
+    }
+    .modal-content {
+      background: white; padding: 30px; border-radius: 16px;
+      width: 100%; max-width: 400px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <i class="fas fa-shield-halved"></i>
+        <span>DecentraVault</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/index.html" class="nav-item">
+          <i class="fas fa-home"></i> Dashboard
+        </a>
+        <a href="/pages/api-keys.html" class="nav-item active">
+          <i class="fas fa-key"></i> API Keys
+        </a>
+        <a href="/pages/profile.html" class="nav-item">
+          <i class="fas fa-user-circle"></i> Profile
+        </a>
+      </nav>
+      <div style="padding: 24px;">
+        <a class="nav-item" onclick="logout()" style="cursor:pointer">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <section id="keys-section">
+        <div class="header">
+          <h1>API Keys</h1>
+          <button onclick="openModal()" class="btn-primary">Generate New Key</button>
+        </div>
+        <div id="newKeyAlert" class="card" style="border: 1px solid #dcfce7; background: #ffffff; display:none;">
+          <div style="display:flex; align-items:center; gap:10px; color:#166534; margin-bottom:12px;"><i class="fas fa-check-circle"></i><p style="font-weight:700; font-size:15px;">New API Key Generated</p></div>
+          <div style="background:#fff7ed; border:1px solid #ffedd5; padding:12px; border-radius:8px; margin-bottom:15px; display:flex; gap:10px;"><i class="fas fa-warning" style="color:#c2410c;"></i><p style="font-size:13px; color:#c2410c;">Save this key! It won't be shown again.</p></div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <code id="newApiKeyDisplay" style="flex:1; background:#f9fafb; padding:12px; border:1px solid var(--border); border-radius:8px; font-size:14px; word-break:break-all;"></code>
+            <button onclick="copyGeneratedKey()" class="btn-primary" style="padding:10px 16px;">Copy</button>
+            <button onclick="dismissKeyAlert()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:14px;"><i class="fas fa-times"></i> Dismiss</button>
+          </div>
+        </div>
+        <div id="keysLoader">
+          <div class="card skeleton-card" style="margin-bottom:16px;"><div><div class="skeleton-line" style="width:140px;"></div><div class="skeleton-line" style="width:220px; margin-bottom:0;"></div></div><div style="display:flex;gap:10px;"><span class="skeleton" style="width:64px;height:26px;border-radius:100px;"></span><span class="skeleton" style="width:28px;height:26px;"></span></div></div>
+          <div class="card skeleton-card" style="margin-bottom:16px;"><div><div class="skeleton-line" style="width:120px;"></div><div class="skeleton-line" style="width:200px; margin-bottom:0;"></div></div><div style="display:flex;gap:10px;"><span class="skeleton" style="width:64px;height:26px;border-radius:100px;"></span><span class="skeleton" style="width:28px;height:26px;"></span></div></div>
+          <div class="card skeleton-card"><div><div class="skeleton-line" style="width:160px;"></div><div class="skeleton-line" style="width:240px; margin-bottom:0;"></div></div><div style="display:flex;gap:10px;"><span class="skeleton" style="width:64px;height:26px;border-radius:100px;"></span><span class="skeleton" style="width:28px;height:26px;"></span></div></div>
+        </div>
+        <div id="keysList"></div>
+      </section>
+    </div>
+  </div>
+
+  <div id="modalOverlay" class="modal-overlay"><div class="modal-content"><h3>Create API Key</h3><p style="font-size:14px; color:var(--text-muted); margin-bottom: 24px;">Enter a reference name for this key.</p><input type="text" id="modalKeyName" placeholder="Production Key" style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; margin-bottom: 24px;"><div style="display:flex; gap:12px;"><button onclick="closeModal()" style="flex:1; padding:12px; border:1px solid var(--border); background:white; cursor:pointer;">Cancel</button><button onclick="confirmGenerateKey()" class="btn-primary" style="flex:1;">Generate</button></div></div></div>
+  <div id="toast" class="toast"><span id="toastMsg"></span></div>
+  <script src="/js/app.js"></script>
+  <script>
+    async function fetchApiKeys() {
+      const list = document.getElementById("keysList");
+      const loader = document.getElementById("keysLoader");
+      loader.style.display = "block";
+      list.innerHTML = "";
+      try {
+        const res = await fetch(`${API_URL}/keys`, { headers: { "Authorization": "Bearer " + currentToken } });
+        const data = await res.json();
+        loader.style.display = "none";
+        if (res.ok) { renderKeys(data.keys); }
+      } catch (err) { loader.style.display = "none"; }
+    }
+    function renderKeys(keys) {
+      const list = document.getElementById("keysList");
+      if (!keys || keys.length === 0) { list.innerHTML = "<p style='text-align:center; color:var(--text-muted);'>No API keys found.</p>"; return; }
+      list.innerHTML = keys.map(k => {
+        const isActive = k.status === 'active';
+        return '<div class="card" style="display:flex; justify-content:space-between; align-items:center;">' +
+          '<div><p style="font-weight:700; font-size:15px; margin-bottom:4px;">' + (k.name || "Unnamed Key") + '</p><p style="font-family:monospace; color:var(--text-muted); font-size:13px;">' + k.key_prefix + '••••••••••••••••••••••••</p></div>' +
+          '<div style="display:flex; gap:12px; align-items:center;">' +
+            '<button onclick="manageKey(\'' + k.id + '\', \'toggle\')" style="font-size:11px; font-weight:700; color:' + (isActive ? '#059669' : '#dc2626') + '; border:1px solid ' + (isActive ? '#d1fae5' : '#fee2e2') + '; background:' + (isActive ? '#ecfdf5' : '#fef2f2') + '; padding:4px 10px; border-radius:100px; cursor:pointer;">' + k.status.toUpperCase() + '</button>' +
+            '<button onclick="manageKey(\'' + k.id + '\', \'delete\')" style="background:none; border:none; color:red; cursor:pointer;"><i class="fas fa-trash"></i></button>' +
+          '</div>' +
+        '</div>';
+      }).join("");
+    }
+    function openModal() { document.getElementById("modalOverlay").style.display="flex"; }
+    function closeModal() { document.getElementById("modalOverlay").style.display="none"; }
+    async function confirmGenerateKey() {
+      const name = document.getElementById("modalKeyName").value.trim() || "My API Key";
+      closeModal();
+      try {
+        const res = await fetch(`${API_URL}/keys/generate`, { method: "POST", headers: { "Authorization": "Bearer " + currentToken, "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+        const data = await res.json();
+        if (res.ok) {
+          const alertEl = document.getElementById("newKeyAlert");
+          document.getElementById("newApiKeyDisplay").innerText = data.apiKey;
+          alertEl.style.display = "block";
+          fetchApiKeys();
+        }
+      } catch (err) { showToast("Generation failed", true); }
+    }
+    async function manageKey(id, mode) {
+        if (mode === "delete" && !confirm("Delete key?")) return;
+        try { await fetch(`${API_URL}/keys/${id}?mode=${mode}`, { method: "DELETE", headers: { "Authorization": "Bearer " + currentToken } }); fetchApiKeys(); showToast("Key updated"); } catch (e) { showToast("Failed", true); }
+    }
+    function copyGeneratedKey() { const text = document.getElementById("newApiKeyDisplay").innerText; navigator.clipboard.writeText(text).then(() => showToast("Copied!")); }
+    function dismissKeyAlert() { document.getElementById("newKeyAlert").style.display = "none"; }
+    document.addEventListener("DOMContentLoaded", fetchApiKeys);
+  </script>
+</body>
+</html>

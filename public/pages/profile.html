@@ -1,0 +1,57 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile | DecentraVault</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <i class="fas fa-shield-halved"></i>
+        <span>DecentraVault</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/index.html" class="nav-item">
+          <i class="fas fa-home"></i> Dashboard
+        </a>
+        <a href="/pages/api-keys.html" class="nav-item">
+          <i class="fas fa-key"></i> API Keys
+        </a>
+        <a href="/pages/profile.html" class="nav-item active">
+          <i class="fas fa-user-circle"></i> Profile
+        </a>
+      </nav>
+      <div style="padding: 24px;">
+        <a class="nav-item" onclick="logout()" style="cursor:pointer">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <section id="profile-section">
+        <div class="header"><h1>Profile</h1></div>
+        <div class="card"><label style="display:block; font-size:13px; font-weight:500; color:var(--text-muted); margin-bottom:8px;">EMAIL ADDRESS</label><p id="profileEmail" style="font-weight:600;"><span class="skeleton" style="width:200px; height:18px;"></span></p></div>
+      </section>
+    </div>
+  </div>
+  <div id="toast" class="toast"><span id="toastMsg"></span></div>
+  <script src="/js/app.js"></script>
+  <script>
+    async function fetchMe() {
+      try {
+        const res = await fetch(`${API_URL}/auth/me`, { headers: { "Authorization": "Bearer " + currentToken } });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById("profileEmail").textContent = data.developer.email;
+        } else { logout(); }
+      } catch (err) { console.error("Token invalid"); }
+    }
+    document.addEventListener("DOMContentLoaded", fetchMe);
+  </script>
+</body>
+</html>

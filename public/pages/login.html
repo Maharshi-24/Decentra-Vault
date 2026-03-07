@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | DecentraVault</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #fafafa;
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 400px;
+      padding: 40px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+    }
+    .password-container {
+      position: relative;
+    }
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .auth-card h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+    .auth-card p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    .btn-primary {
+      width: 100%;
+    }
+    .footer-text {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .footer-text a {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <div class="auth-card">
+    <div id="loginView">
+      <h1>Welcome back</h1>
+      <p>Login to your DecentraVault account.</p>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="loginEmail" placeholder="name@example.com" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <div class="password-container">
+            <input type="password" id="loginPassword" placeholder="••••••••" required>
+            <i class="fas fa-eye password-toggle" onclick="togglePassword('loginPassword', this)"></i>
+          </div>
+        </div>
+        <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="keepLoggedIn">
+          <label for="keepLoggedIn" style="font-size: 13px; color: var(--text-muted);">Keep me logged in</label>
+        </div>
+        <button type="submit" class="btn-primary">Login</button>
+      </form>
+      <p class="footer-text">Don't have an account? <a onclick="toggleAuth()">Sign up</a></p>
+    </div>
+
+    <div id="signupView" class="hidden">
+      <h1>Create account</h1>
+      <p>Securely store your files on IPFS.</p>
+
+      <form id="signupForm">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="signupEmail" placeholder="name@example.com" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <div class="password-container">
+            <input type="password" id="signupPassword" placeholder="••••••••" required minlength="6">
+            <i class="fas fa-eye password-toggle" onclick="togglePassword('signupPassword', this)"></i>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Confirm Password</label>
+          <div class="password-container">
+            <input type="password" id="signupConfirm" placeholder="••••••••" required>
+            <i class="fas fa-eye password-toggle" onclick="togglePassword('signupConfirm', this)"></i>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">Sign up</button>
+      </form>
+      <p class="footer-text">Already have an account? <a onclick="toggleAuth()">Login</a></p>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">
+    <span id="toastMsg"></span>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    function toggleAuth() {
+      document.getElementById('loginView').classList.toggle('hidden');
+      document.getElementById('signupView').classList.toggle('hidden');
+    }
+
+    function togglePassword(id, icon) {
+      const input = document.getElementById(id);
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const keepLoggedIn = document.getElementById('keepLoggedIn').checked;
+
+      try {
+        const res = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          if (keepLoggedIn) localStorage.setItem('token', data.session.access_token);
+          else sessionStorage.setItem('token', data.session.access_token);
+          window.location.href = '/index.html';
+        } else {
+          showToast(data.error || 'Login failed', true);
+        }
+      } catch (err) {
+        showToast('Service unavailable', true);
+      }
+    });
+
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('signupEmail').value;
+      const password = document.getElementById('signupPassword').value;
+      const confirm = document.getElementById('signupConfirm').value;
+
+      if (password !== confirm) {
+        showToast('Passwords do not match', true);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/auth/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast('Account created! Please login.');
+          toggleAuth();
+        } else {
+          showToast(data.error || 'Signup failed', true);
+        }
+      } catch (err) {
+        showToast('Service unavailable', true);
+      }
+    });
+  </script>
+</body>
+</html>

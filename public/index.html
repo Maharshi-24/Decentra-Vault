@@ -1,241 +1,73 @@
-<!DOCTYPE html>
+ï»¿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DecentraVault - Developer Dashboard</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <link rel="stylesheet" href="css/styles.css">
+  <title>Dashboard | DecentraVault</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-
-  <div class="logo-container">
-    <i class="fas fa-vault"></i>
-    <span>DecentraVault</span>
-  </div>
-
-  <div id="modalOverlay" class="modal-overlay">
-    <div class="modal-content">
-      <h3 style="margin-bottom: 10px; font-size: 18px; color: var(--text-main);">Name your API Key</h3>
-      <p style="margin-bottom: 20px; font-size: 14px; color: var(--text-muted);">This helps you identify where this key is being used.</p>
-      <input type="text" id="modalInputKeyName" placeholder="e.g. Production Website" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 20px; font-size: 14px;">
-      <div style="display: flex; gap: 10px;">
-        <button onclick="closeModal()" style="flex: 1; padding: 12px; border: 1px solid var(--border); background: white; border-radius: 8px; cursor: pointer; font-weight: 600;">Cancel</button>
-        <button onclick="confirmGenerateKey()" style="flex: 1; padding: 12px; border: none; background: var(--primary-color); color: white; border-radius: 8px; cursor: pointer; font-weight: 600;">Confirm</button>
+  <div class="app-container">
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <i class="fas fa-shield-halved"></i>
+        <span>DecentraVault</span>
       </div>
-    </div>
-  </div>
-
-  <div id="toast" class="toast">
-    <i class="fas fa-check-circle" style="color: #4ade80;"></i>
-    <span id="toastMsg">Copied!</span>
-  </div>
-
-  <!-- Shared Card Container for Auth and Loading -->
-  <div id="authCard" class="card-container auth-card">
-    
-    <!-- Redesigned Skeleton Loader (Overlays the card) -->
-    <div id="skeletonLoader" class="skeleton-overlay">
-      <div class="skeleton" style="height: 32px; width: 60%; margin-bottom: 12px;"></div>
-      <div class="skeleton" style="height: 16px; width: 40%; margin-bottom: 32px;"></div>
-      <div class="skeleton" style="height: 50px; width: 100%; margin-bottom: 20px;"></div>
-      <div class="skeleton" style="height: 50px; width: 100%; margin-bottom: 20px;"></div>
-      <div class="skeleton" style="height: 45px; width: 100%;"></div>
-    </div>
-
-    <!-- Login View -->
-    <div id="loginView" style="display: none;">
-      <h1>Welcome Back</h1>
-      <p class="subtitle">Enter your credentials to manage your vault.</p>
-
-      <div class="error-toast" id="errorMsg"></div>
-
-      <form id="loginForm">
-        <div class="form-group">
-          <label>Email Address</label>
-          <div class="input-wrapper">
-            <i class="far fa-envelope"></i>
-            <input type="email" id="loginEmail" placeholder="name@example.com" required>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <a href="#" class="forgot-pass" style="margin-top: -5px;">Forgot password?</a>
-          <label>Password</label>
-          <div class="input-wrapper">
-            <i class="fas fa-key"></i>
-            <input type="password" id="loginPassword" placeholder="••••••••" required>
-            <i class="fas fa-eye" onclick="togglePasswordVisibility('loginPassword', this)" style="position: absolute; right: 12px; left: auto; cursor: pointer; color: var(--text-muted);"></i>
-          </div>
-        </div>
-
-        <div class="checkbox-group" style="margin: 15px 0 25px;">
-          <input type="checkbox" id="keepLoggedIn">
-          <label for="keepLoggedIn">Keep me logged in</label>
-        </div>
-
-        <button type="submit" class="btn-primary">Sign In</button>
-      </form>
-
-      <button class="btn-google">
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
-        Continue with Google
-      </button>
-
-      <p class="footer-text">
-        New here? <a onclick="toggleAuth()">Create an account</a>
-      </p>
-    </div>
-
-    <!-- Sign Up View -->
-    <div id="signupView" class="hidden">
-      <h1>Create Account</h1>
-      <p class="subtitle">Start building secure decentralized apps today.</p>
-
-      <div class="error-toast" id="signupErrorMsg"></div>
-
-      <form id="signupForm">
-        <div class="form-group">
-          <label>Email Address</label>
-          <div class="input-wrapper">
-            <i class="far fa-envelope"></i>
-            <input type="email" id="signupEmail" placeholder="name@example.com" required>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Password</label>
-          <div class="input-wrapper">
-            <i class="fas fa-key"></i>
-            <input type="password" id="signupPassword" placeholder="••••••••" required minlength="6">
-            <i class="fas fa-eye" onclick="togglePasswordVisibility('signupPassword', this)" style="position: absolute; right: 12px; left: auto; cursor: pointer; color: var(--text-muted);"></i>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Confirm Password</label>
-          <div class="input-wrapper">
-            <i class="fas fa-check-double"></i>
-            <input type="password" id="signupConfirm" placeholder="••••••••" required>
-            <i class="fas fa-eye" onclick="togglePasswordVisibility('signupConfirm', this)" style="position: absolute; right: 12px; left: auto; cursor: pointer; color: var(--text-muted);"></i>
-          </div>
-        </div>
-
-        <button type="submit" class="btn-primary">Get Started</button>
-      </form>
-
-      <p class="footer-text">
-        Already have an account? <a onclick="toggleAuth()">Log in</a>
-      </p>
-    </div>
-  </div>
-
-  <!-- Dashboard Container (Using shared card logic) -->
-  <div class="dashboard-container" id="dashboard">
-    <div class="nav">
-      <h2 style="font-size: 20px;">Developer Console</h2>
-      <button onclick="logout()" style="background:none; border:none; color:var(--text-muted); font-weight:600; cursor:pointer; font-size:14px;">Logout</button>
-    </div>
-
-    <div class="dashboard-tabs">
-      <button class="tab-btn active" onclick="switchTab('dashboardMain', this)">
-        <i class="fas fa-chart-line"></i> Dashboard
-      </button>
-      <button class="tab-btn" onclick="switchTab('profileView', this)">
-        <i class="fas fa-user-circle"></i> Profile
-      </button>
-    </div>
-
-    <div id="dashboardMain" class="tab-content active">
-      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:20px;">
-        <div style="padding:20px; border:1px solid var(--border); border-radius:12px; background: #fff;">
-          <p style="color:var(--text-muted); font-size:13px; font-weight: 500;">Total Files</p>
-          <p style="font-size:24px; font-weight:700;">0</p>
-        </div>
-        <div style="padding:20px; border:1px solid var(--border); border-radius:12px; background: #fff;">
-          <p style="color:var(--text-muted); font-size:13px; font-weight: 500;">API Keys</p>
-          <p style="font-size:24px; font-weight:700;" id="apiKeyCount">0</p>
-        </div>
-        <div style="padding:20px; border:1px solid var(--border); border-radius:12px; background: #fff;">
-          <p style="color:var(--text-muted); font-size:13px; font-weight: 500;">Current Plan</p>
-          <p style="font-size:24px; font-weight:700; color: var(--primary-color);" id="userPlan">FREE</p>
-        </div>
-        <div style="padding:20px; border:1px solid var(--border); border-radius:12px; background: #fff;">
-          <p style="color:var(--text-muted); font-size:13px; font-weight: 500;">Storage</p>
-          <p style="font-size:24px; font-weight:700;">0 KB</p>
-        </div>
-      </div>
-
-      <div style="margin-top: 40px; padding: 28px; border: 1px solid var(--border); border-radius: 16px; background: #fafafa;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
-          <h3 style="color:var(--text-main); font-size:18px; font-weight: 700;">API Management</h3>
-          <button onclick="generateApiKey()" class="btn-primary" style="width:auto; padding:10px 20px; margin-bottom:0; font-size: 14px;">
-            <i class="fas fa-plus"></i> Generate Key
-          </button>
-        </div>
-        
-        <div id="newKeyAlert" class="success" style="padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #dcfce7; background: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display:none;">
-          <div style="display:flex; align-items:center; gap:10px; color:#166534; margin-bottom:12px;">
-            <i class="fas fa-check-circle"></i>
-            <p style="font-weight:700; font-size:15px;">Key Generated Successfully</p>
-          </div>
-          
-          <div style="background:#fff7ed; border:1px solid #ffedd5; padding:12px; border-radius:8px; display:flex; gap:10px; margin-bottom:20px;">
-            <i class="fas fa-exclamation-triangle" style="color:#9a3412; margin-top:2px;"></i>
-            <p style="font-size:13px; color:#9a3412; line-height:1.4;">
-              <strong>Security Warning:</strong> This key will only be shown once. Please save it securely now.
-            </p>
-          </div>
-
-          <div style="display:flex; gap:10px;">
-            <code id="newApiKeyRaw" style="flex:1; background:#f9fafb; padding:14px; border-radius:8px; border:1.5px solid var(--border); font-size:14px; font-weight:700; color:#111827; word-break:break-all; font-family:'JetBrains Mono', monospace;"></code>
-            <button onclick="copyToClipboard('newApiKeyRaw')" style="background:var(--primary-color); color:white; border:none; border-radius:8px; padding:0 15px; cursor:pointer; font-weight:600;">
-              <i class="fas fa-copy"></i>
-            </button>
-          </div>
-          <button onclick="document.getElementById('newKeyAlert').style.display='none'" style="margin-top:10px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px; text-decoration:underline;">Close persistent alert</button>
-        </div>
-
-        <div id="keysList">
-          <p style="color:var(--text-muted); font-size:14px; text-align:center; padding: 20px;">Fetching your keys...</p>
-        </div>
+      <nav class="sidebar-nav">
+        <a href="/index.html" class="nav-item active">
+          <i class="fas fa-home"></i> Dashboard
+        </a>
+        <a href="/pages/api-keys.html" class="nav-item">
+          <i class="fas fa-key"></i> API Keys
+        </a>
+        <a href="/pages/profile.html" class="nav-item">
+          <i class="fas fa-user-circle"></i> Profile
+        </a>
+      </nav>
+      <div style="padding: 24px;">
+        <a class="nav-item" onclick="logout()" style="cursor:pointer">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
       </div>
     </div>
 
-    <div id="profileView" class="tab-content">
-      <div class="profile-card">
-        <div class="profile-avatar" id="profileInitial">U</div>
-        <div class="profile-info">
-          <h2 style="margin-bottom: 24px; font-size: 20px;">Developer Profile</h2>
-          
-          <div class="info-row">
-            <span class="info-label">Email Address</span>
-            <span class="info-value" id="profileEmail">...</span>
-          </div>
-          
-          <div class="info-row">
-            <span class="info-label">Plan Level</span>
-            <span class="info-value" id="profilePlan" style="text-transform: capitalize;">free</span>
-          </div>
-
-          <div class="info-row">
-            <span class="info-label">Developer ID</span>
-            <span class="info-value" id="profileId" style="font-family: monospace; font-size: 11px; opacity: 0.7;">...</span>
-          </div>
-
-          <div class="info-row" style="border-bottom: none;">
-            <span class="info-label">Member Since</span>
-            <span class="info-value" id="profileJoined">...</span>
-          </div>
-
-          <div style="margin-top: 32px; display: flex; gap: 15px;">
-            <button class="btn-primary" style="width: auto; padding: 12px 24px; margin-bottom: 0;">Upgrade Plan</button>
-          </div>
+    <div class="main-content">
+      <section id="dashboard-section">
+        <div class="header"><h1>Dashboard</h1></div>
+        <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:24px; margin-bottom: 40px;">
+          <div class="card"><p style="color:var(--text-muted); font-size:12px; margin-bottom: 8px;">TOTAL FILES</p><p id="totalFiles" style="font-size:24px; font-weight:700;">0</p></div>
+          <div class="card"><p style="color:var(--text-muted); font-size:12px; margin-bottom: 8px;">API KEYS ACTIVE</p><p id="apiKeyCountDisplay" style="font-size:24px; font-weight:700;"><span class="skeleton" style="width:40px; height:28px;"></span></p></div>
+          <div class="card"><p style="color:var(--text-muted); font-size:12px; margin-bottom: 8px;">USAGE</p><p style="font-size:24px; font-weight:700;">0 KB</p></div>
+          <div class="card"><p style="color:var(--text-muted); font-size:12px; margin-bottom: 8px;">PLAN</p><p id="planDisplay" style="font-size:24px; font-weight:700;"><span class="skeleton" style="width:60px; height:28px;"></span></p></div>
         </div>
-      </div>
+        <div class="card">
+          <h3 style="margin-bottom: 16px;">Welcome to DecentraVault</h3>
+          <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6;">Start building decentralized applications using our SDK.</p>
+        </div>
+      </section>
     </div>
   </div>
-
-  <script src="js/app.js"></script>
+  <div id="toast" class="toast"><span id="toastMsg"></span></div>
+  <script src="/js/app.js"></script>
+  <script>
+    async function fetchStats() {
+      try {
+        const res = await fetch(`${API_URL}/auth/me`, { headers: { "Authorization": "Bearer " + currentToken } });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById("planDisplay").textContent = data.developer.plan.toUpperCase();
+          const keysRes = await fetch(`${API_URL}/keys`, { headers: { "Authorization": "Bearer " + currentToken } });
+          const keysData = await keysRes.json();
+          document.getElementById("apiKeyCountDisplay").textContent = keysRes.ok ? keysData.keys.length : 0;
+        } else { logout(); }
+      } catch (err) {
+        document.getElementById("planDisplay").textContent = "FREE";
+        document.getElementById("apiKeyCountDisplay").textContent = "0";
+        console.error("Stats fetch failed");
+      }
+    }
+    document.addEventListener("DOMContentLoaded", fetchStats);
+  </script>
 </body>
 </html>
