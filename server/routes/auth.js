@@ -200,6 +200,9 @@ router.get('/me', async (req, res) => {
         id: developer.id,
         email: developer.email,
         plan: developer.plan,
+        name: developer.name || null,
+        age: developer.age || null,
+        gender: developer.gender || null,
         created_at: developer.created_at
       }
     });
@@ -209,6 +212,50 @@ router.get('/me', async (req, res) => {
     res.status(500).json({ 
       error: 'Internal server error' 
     });
+  }
+});
+
+/**
+ * PUT /api/auth/profile
+ * Update optional profile fields: name, age, gender
+ */
+router.put('/profile', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split('Bearer ')[1];
+    if (!token) return res.status(401).json({ error: 'Authentication required' });
+
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return res.status(401).json({ error: 'Invalid or expired token' });
+
+    const { name, age, gender } = req.body;
+    const updates = {};
+    if (name   !== undefined) updates.name   = name   || null;
+    if (age    !== undefined) updates.age    = age    ? parseInt(age) : null;
+    if (gender !== undefined) updates.gender = gender || null;
+
+    const { data: developer, error: dbError } = await supabase
+      .from('developers')
+      .update(updates)
+      .eq('id', user.id)
+      .select()
+      .single();
+
+    if (dbError) return res.status(500).json({ error: 'Failed to update profile' });
+
+    res.json({
+      message: 'Profile updated',
+      developer: {
+        id: developer.id,
+        email: developer.email,
+        plan: developer.plan,
+        name: developer.name || null,
+        age: developer.age || null,
+        gender: developer.gender || null
+      }
+    });
+  } catch (error) {
+    console.error('Profile update error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
