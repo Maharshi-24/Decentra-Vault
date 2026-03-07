@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DecentraVault - Get Started</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-color: #4f46e5;
+      --primary-hover: #4338ca;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+      --bg-dots: #f3f4f6;
+      --white: #ffffff;
+      --border: #e5e7eb;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--white);
+      background-image: radial-gradient(#d1d5db 1px, transparent 1px);
+      background-size: 20px 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+
+    .logo-container i {
+      font-size: 32px;
+      color: var(--primary-color);
+    }
+
+    .logo-container span {
+      font-size: 32px;
+      font-weight: 700;
+      color: #111827;
+      letter-spacing: -0.5px;
+    }
+
+    .auth-card {
+      background: var(--white);
+      width: 100%;
+      max-width: 440px;
+      padding: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 8px;
+      text-align: left;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 16px;
+      margin-bottom: 32px;
+      text-align: left;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-wrapper i {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 12px 12px 40px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .forgot-pass {
+      float: right;
+      font-size: 14px;
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 24px;
+      margin-bottom: 24px;
+    }
+
+    .checkbox-group input {
+      width: 18px;
+      height: 18px;
+      padding: 0;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .checkbox-group label {
+      margin-bottom: 0;
+      font-weight: 400;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-bottom: 16px;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-google {
+      width: 100%;
+      padding: 12px;
+      background: var(--white);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: background 0.2s;
+    }
+
+    .btn-google:hover {
+      background: #f9fafb;
+    }
+
+    .btn-google img {
+      width: 20px;
+      height: 20px;
+    }
+
+    .footer-text {
+      text-align: center;
+      margin-top: 32px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .footer-text a {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .error-toast {
+      background: #fee2e2;
+      color: #dc2626;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 20px;
+      display: none;
+      border: 1px solid #fecaca;
+    }
+
+    /* Dashboard Styles */
+    .dashboard-container {
+      width: 100%;
+      max-width: 1000px;
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      display: none;
+    }
+
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="logo-container">
+    <i class="fas fa-shield-halved"></i>
+    <span>DecentraVault</span>
+  </div>
+
+  <div class="auth-card" id="authCard">
+    <div id="loginView">
+      <h1>Let's get you back on track</h1>
+      <p class="subtitle">Login to continue where you left off.</p>
+
+      <div class="error-toast" id="errorMsg"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label>Email</label>
+          <div class="input-wrapper">
+            <i class="far fa-envelope"></i>
+            <input type="email" id="loginEmail" placeholder="name@example.com" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <a href="#" class="forgot-pass">Forgot password?</a>
+          <label>Password</label>
+          <div class="input-wrapper">
+            <i class="fas fa-key"></i>
+            <input type="password" id="loginPassword" placeholder="••••••••" required>
+          </div>
+        </div>
+
+        <div class="checkbox-group">
+          <input type="checkbox" id="keepLoggedIn">
+          <label for="keepLoggedIn">Keep me logged in</label>
+        </div>
+
+        <button type="submit" class="btn-primary">Login</button>
+      </form>
+
+      <button class="btn-google">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+        Continue with Google
+      </button>
+
+      <p class="footer-text">
+        Didn't have an account? <a onclick="toggleAuth()">Sign up</a>
+      </p>
+    </div>
+
+    <!-- Sign Up View -->
+    <div id="signupView" class="hidden">
+      <h1>Create your account</h1>
+      <p class="subtitle">Start building secure decentralized apps today.</p>
+
+      <div class="error-toast" id="signupErrorMsg"></div>
+
+      <form id="signupForm">
+        <div class="form-group">
+          <label>Email</label>
+          <div class="input-wrapper">
+            <i class="far fa-envelope"></i>
+            <input type="email" id="signupEmail" placeholder="name@example.com" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <div class="input-wrapper">
+            <i class="fas fa-key"></i>
+            <input type="password" id="signupPassword" placeholder="••••••••" required minlength="6">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Confirm Password</label>
+          <div class="input-wrapper">
+            <i class="fas fa-check-double"></i>
+            <input type="password" id="signupConfirm" placeholder="••••••••" required>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary">Sign up</button>
+      </form>
+
+      <p class="footer-text">
+        Already have an account? <a onclick="toggleAuth()">Login</a>
+      </p>
+    </div>
+  </div>
+
+  <div class="dashboard-container" id="dashboard">
+    <div class="nav">
+      <h2>Welcome back, <span id="userEmailDisplay"></span></h2>
+      <button onclick="logout()" style="background:none; border:none; color:var(--primary-color); font-weight:600; cursor:pointer;">Logout</button>
+    </div>
+    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px;">
+      <div style="padding:20px; border:1px solid var(--border); border-radius:8px;">
+        <p style="color:var(--text-muted); font-size:14px;">Total Files</p>
+        <p style="font-size:24px; font-weight:700;">0</p>
+      </div>
+      <div style="padding:20px; border:1px solid var(--border); border-radius:8px;">
+        <p style="color:var(--text-muted); font-size:14px;">API Keys</p>
+        <p style="font-size:24px; font-weight:700;">0</p>
+      </div>
+      <div style="padding:20px; border:1px solid var(--border); border-radius:8px;">
+        <p style="color:var(--text-muted); font-size:14px;">Storage Used</p>
+        <p style="font-size:24px; font-weight:700;">0 KB</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3000/api';
+    let currentToken = localStorage.getItem('token');
+
+    function toggleAuth() {
+      document.getElementById('loginView').classList.toggle('hidden');
+      document.getElementById('signupView').classList.toggle('hidden');
+      hideErrors();
+    }
+
+    function hideErrors() {
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('signupErrorMsg').style.display = 'none';
+    }
+
+    function showError(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    // Login logic
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideErrors();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+
+      try {
+        const res = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('token', data.session.access_token);
+          window.location.reload();
+        } else {
+          showError('errorMsg', data.error);
+        }
+      } catch (err) {
+        showError('errorMsg', 'Service unavailable');
+      }
+    });
+
+    // Signup logic
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideErrors();
+      const email = document.getElementById('signupEmail').value;
+      const password = document.getElementById('signupPassword').value;
+      const confirm = document.getElementById('signupConfirm').value;
+
+      if (password !== confirm) {
+        showError('signupErrorMsg', 'Passwords do not match');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/auth/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert('Account created! Please login.');
+          toggleAuth();
+          document.getElementById('loginEmail').value = email;
+        } else {
+          showError('signupErrorMsg', data.error);
+        }
+      } catch (err) {
+        showError('signupErrorMsg', 'Service unavailable');
+      }
+    });
+
+    // Session check
+    if (currentToken) {
+      fetch(`${API_URL}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${currentToken}` }
+      }).then(res => res.json()).then(data => {
+        if (data.developer) {
+          document.getElementById('authCard').style.display = 'none';
+          document.getElementById('dashboard').style.display = 'block';
+          document.getElementById('userEmailDisplay').textContent = data.developer.email;
+        } else {
+          localStorage.removeItem('token');
+        }
+      });
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.reload();
+    }
+  </script>
+</body>
+</html>
+          headers: {
+            'Authorization': `Bearer ${currentToken}`
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          showDashboard(data.developer);
+        } else {
+          localStorage.removeItem('token');
+          currentToken = null;
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+      }
+    }
+
+    // Show dashboard
+    function showDashboard(developer) {
+      document.getElementById('authContainer').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      
+      document.getElementById('userEmail').textContent = developer.email;
+      document.getElementById('userPlan').textContent = developer.plan.toUpperCase();
+    }
+
+    // Logout
+    function logout() {
+      localStorage.removeItem('token');
+      currentToken = null;
+      document.getElementById('authContainer').style.display = 'block';
+      document.getElementById('dashboard').style.display = 'none';
+      document.getElementById('loginForm').reset();
+      hideMessages();
+    }
+
+    // Helper functions
+    function showError(message) {
+      const errorEl = document.getElementById('errorMsg');
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+    }
+
+    function showSuccess(message) {
+      const successEl = document.getElementById('successMsg');
+      successEl.textContent = message;
+      successEl.style.display = 'block';
+    }
+
+    function hideMessages() {
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('successMsg').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
