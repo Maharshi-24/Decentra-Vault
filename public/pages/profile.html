@@ -34,10 +34,16 @@
 
     <div class="main-content">
       <section id="profile-section">
-        <div class="header"><h1>Profile</h1></div>
+        <div class="header">
+          <h1>Profile</h1>
+          <button id="editBtn" onclick="startEdit()" class="btn-primary" style="display:flex; align-items:center; gap:8px;">
+            <i class="fas fa-pen"></i> Edit
+          </button>
+        </div>
 
         <div class="card" style="max-width: 560px;">
-          <!-- Email (read-only) -->
+
+          <!-- Email (always read-only) -->
           <div style="margin-bottom: 24px;">
             <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px;">Email Address</label>
             <p id="profileEmail" style="font-size:15px; font-weight:600; color:var(--text-main);">
@@ -47,20 +53,23 @@
 
           <!-- Name -->
           <div style="margin-bottom: 20px;">
-            <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px;">Full Name <span style="font-weight:400; text-transform:none; font-size:11px;">(optional)</span></label>
-            <input id="profileName" type="text" placeholder="e.g. John Doe" style="width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; font-size:14px; outline:none; transition: border 0.2s;" onfocus="this.style.borderColor='#000'" onblur="this.style.borderColor='var(--border)'">
+            <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px;">Full Name</label>
+            <p id="viewName" style="font-size:15px; color:var(--text-main);"><span class="skeleton" style="width:160px; height:18px;"></span></p>
+            <input id="profileName" type="text" placeholder="e.g. John Doe" style="display:none; width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; font-size:14px; outline:none;" onfocus="this.style.borderColor='#000'" onblur="this.style.borderColor='var(--border)'">
           </div>
 
           <!-- Age -->
           <div style="margin-bottom: 20px;">
-            <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px;">Age <span style="font-weight:400; text-transform:none; font-size:11px;">(optional)</span></label>
-            <input id="profileAge" type="number" min="1" max="120" placeholder="e.g. 25" style="width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; font-size:14px; outline:none; transition: border 0.2s;" onfocus="this.style.borderColor='#000'" onblur="this.style.borderColor='var(--border)'">
+            <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px;">Age</label>
+            <p id="viewAge" style="font-size:15px; color:var(--text-main);"><span class="skeleton" style="width:60px; height:18px;"></span></p>
+            <input id="profileAge" type="number" min="1" max="120" placeholder="e.g. 25" style="display:none; width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; font-size:14px; outline:none;" onfocus="this.style.borderColor='#000'" onblur="this.style.borderColor='var(--border)'">
           </div>
 
           <!-- Gender -->
-          <div style="margin-bottom: 28px;">
-            <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px;">Gender <span style="font-weight:400; text-transform:none; font-size:11px;">(optional)</span></label>
-            <select id="profileGender" style="width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; font-size:14px; outline:none; background:white; cursor:pointer; transition: border 0.2s;" onfocus="this.style.borderColor='#000'" onblur="this.style.borderColor='var(--border)'">
+          <div style="margin-bottom: 8px;">
+            <label style="display:block; font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px;">Gender</label>
+            <p id="viewGender" style="font-size:15px; color:var(--text-main);"><span class="skeleton" style="width:80px; height:18px;"></span></p>
+            <select id="profileGender" style="display:none; width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; font-size:14px; outline:none; background:white; cursor:pointer;" onfocus="this.style.borderColor='#000'" onblur="this.style.borderColor='var(--border)'">
               <option value="">Prefer not to say</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
@@ -68,7 +77,12 @@
             </select>
           </div>
 
-          <button onclick="saveProfile()" class="btn-primary" style="width:100%; padding:12px;">Save Changes</button>
+          <!-- Save / Cancel (hidden until edit mode) -->
+          <div id="editActions" style="display:none; margin-top:24px; display:none; gap:12px;">
+            <button onclick="saveProfile()" class="btn-primary" id="saveBtn" style="flex:1; padding:12px;">Save Changes</button>
+            <button onclick="cancelEdit()" id="cancelBtn" style="flex:1; padding:12px; border:1px solid var(--border); background:white; border-radius:6px; font-size:14px; cursor:pointer;">Cancel</button>
+          </div>
+
         </div>
       </section>
     </div>
@@ -76,39 +90,76 @@
   <div id="toast" class="toast"><span id="toastMsg"></span></div>
   <script src="/js/app.js"></script>
   <script>
+    let profileData = {};
+
+    function setViewMode() {
+      ["profileName","profileAge","profileGender"].forEach(id => document.getElementById(id).style.display = "none");
+      document.getElementById("viewName").style.display   = "block";
+      document.getElementById("viewAge").style.display    = "block";
+      document.getElementById("viewGender").style.display = "block";
+      document.getElementById("editActions").style.display = "none";
+      document.getElementById("editBtn").style.display    = "flex";
+    }
+
+    function startEdit() {
+      document.getElementById("profileName").value  = profileData.name   || "";
+      document.getElementById("profileAge").value   = profileData.age    || "";
+      document.getElementById("profileGender").value = profileData.gender || "";
+      ["profileName","profileAge","profileGender"].forEach(id => document.getElementById(id).style.display = "block");
+      document.getElementById("viewName").style.display   = "none";
+      document.getElementById("viewAge").style.display    = "none";
+      document.getElementById("viewGender").style.display = "none";
+      document.getElementById("editActions").style.display = "flex";
+      document.getElementById("editBtn").style.display    = "none";
+    }
+
+    function cancelEdit() { setViewMode(); }
+
+    function applyView(d) {
+      const genderLabel = { male: "Male", female: "Female", other: "Other" };
+      document.getElementById("viewName").textContent   = d.name   || "—";
+      document.getElementById("viewAge").textContent    = d.age    || "—";
+      document.getElementById("viewGender").textContent = genderLabel[d.gender] || "—";
+    }
+
     async function fetchMe() {
       try {
         const res = await fetch(`${API_URL}/auth/me`, { headers: { "Authorization": "Bearer " + currentToken } });
         const data = await res.json();
         if (res.ok) {
-          const d = data.developer;
-          document.getElementById("profileEmail").textContent = d.email;
-          if (d.name)   document.getElementById("profileName").value  = d.name;
-          if (d.age)    document.getElementById("profileAge").value   = d.age;
-          if (d.gender) document.getElementById("profileGender").value = d.gender;
+          profileData = data.developer;
+          document.getElementById("profileEmail").textContent = profileData.email;
+          applyView(profileData);
+          setViewMode();
         } else { logout(); }
       } catch (err) { console.error("Profile fetch failed"); }
     }
 
     async function saveProfile() {
-      const btn = document.querySelector("button[onclick='saveProfile()']");
-      btn.textContent = "Saving...";
-      btn.disabled = true;
+      const saveBtn = document.getElementById("saveBtn");
+      saveBtn.textContent = "Saving...";
+      saveBtn.disabled = true;
       try {
+        const body = {
+          name:   document.getElementById("profileName").value.trim() || null,
+          age:    document.getElementById("profileAge").value || null,
+          gender: document.getElementById("profileGender").value || null
+        };
         const res = await fetch(`${API_URL}/auth/profile`, {
           method: "PUT",
           headers: { "Authorization": "Bearer " + currentToken, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name:   document.getElementById("profileName").value.trim() || null,
-            age:    document.getElementById("profileAge").value || null,
-            gender: document.getElementById("profileGender").value || null
-          })
+          body: JSON.stringify(body)
         });
-        if (res.ok) { showToast("Profile saved!"); }
-        else        { showToast("Save failed", true); }
+        if (res.ok) {
+          const data = await res.json();
+          profileData = { ...profileData, ...data.developer };
+          applyView(profileData);
+          setViewMode();
+          showToast("Profile saved!");
+        } else { showToast("Save failed", true); }
       } catch (err) { showToast("Save failed", true); }
-      btn.textContent = "Save Changes";
-      btn.disabled = false;
+      saveBtn.textContent = "Save Changes";
+      saveBtn.disabled = false;
     }
 
     document.addEventListener("DOMContentLoaded", fetchMe);
