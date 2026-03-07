@@ -36,7 +36,7 @@
       <section id="dashboard-section">
         <div class="header"><h1>Dashboard</h1></div>
         <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:24px; margin-bottom: 40px;">
-          <div class="card"><p style="color:var(--text-muted); font-size:12px; margin-bottom: 8px;">TOTAL FILES</p><p id="totalFiles" style="font-size:24px; font-weight:700;">0</p></div>
+          <div class="card"><p style="color:var(--text-muted); font-size:12px; margin-bottom: 8px;">TOTAL FILES</p><p id="totalFiles" style="font-size:24px; font-weight:700;"><span class="skeleton" style="width:40px; height:28px;"></span></p></div>
           <div class="card"><p style="color:var(--text-muted); font-size:12px; margin-bottom: 8px;">API KEYS ACTIVE</p><p id="apiKeyCountDisplay" style="font-size:24px; font-weight:700;"><span class="skeleton" style="width:40px; height:28px;"></span></p></div>
           <div class="card"><p style="color:var(--text-muted); font-size:12px; margin-bottom: 8px;">USAGE</p><p style="font-size:24px; font-weight:700;">0 KB</p></div>
           <div class="card"><p style="color:var(--text-muted); font-size:12px; margin-bottom: 8px;">PLAN</p><p id="planDisplay" style="font-size:24px; font-weight:700;"><span class="skeleton" style="width:60px; height:28px;"></span></p></div>
@@ -57,6 +57,7 @@
         const data = await res.json();
         if (res.ok) {
           document.getElementById("planDisplay").textContent = data.developer.plan.toUpperCase();
+          document.getElementById("totalFiles").textContent = data.developer.file_count ?? 0;
           const keysRes = await fetch(`${API_URL}/keys`, { headers: { "Authorization": "Bearer " + currentToken } });
           const keysData = await keysRes.json();
           document.getElementById("apiKeyCountDisplay").textContent = keysRes.ok ? keysData.keys.length : 0;
@@ -64,6 +65,7 @@
       } catch (err) {
         document.getElementById("planDisplay").textContent = "FREE";
         document.getElementById("apiKeyCountDisplay").textContent = "0";
+        document.getElementById("totalFiles").textContent = "0";
         console.error("Stats fetch failed");
       }
     }

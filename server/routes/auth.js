@@ -195,6 +195,12 @@ router.get('/me', async (req, res) => {
       });
     }
 
+    // Fetch file count
+    const { count: fileCount } = await supabase
+      .from('files')
+      .select('file_id', { count: 'exact', head: true })
+      .eq('developer_id', user.id);
+
     res.json({
       developer: {
         id: developer.id,
@@ -203,6 +209,7 @@ router.get('/me', async (req, res) => {
         name: developer.name || null,
         age: developer.age || null,
         gender: developer.gender || null,
+        file_count: fileCount || 0,
         created_at: developer.created_at
       }
     });
