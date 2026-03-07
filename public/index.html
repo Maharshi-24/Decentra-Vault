@@ -241,17 +241,38 @@
       padding-bottom: 20px;
       border-bottom: 1px solid var(--border);
     }
+
+    /* Skeleton Loading Styles */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s infinite;
+      border-radius: 4px;
+    }
+
+    @keyframes skeleton-loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
   </style>
 </head>
 <body>
 
-  <div class="logo-container">
+  <div class="logo-container" id="logoContainer">
     <i class="fas fa-shield-halved"></i>
     <span>DecentraVault</span>
   </div>
 
   <div class="auth-card" id="authCard">
-    <div id="loginView">
+    <div id="skeletonLoader">
+      <div class="skeleton" style="height: 32px; width: 60%; margin-bottom: 12px;"></div>
+      <div class="skeleton" style="height: 16px; width: 40%; margin-bottom: 32px;"></div>
+      <div class="skeleton" style="height: 50px; width: 100%; margin-bottom: 20px;"></div>
+      <div class="skeleton" style="height: 50px; width: 100%; margin-bottom: 20px;"></div>
+      <div class="skeleton" style="height: 45px; width: 100%;"></div>
+    </div>
+
+    <div id="loginView" style="display: none;">
       <h1>Let's get you back on track</h1>
       <p class="subtitle">Login to continue where you left off.</p>
 
@@ -272,6 +293,7 @@
           <div class="input-wrapper">
             <i class="fas fa-key"></i>
             <input type="password" id="loginPassword" placeholder="••••••••" required>
+            <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('loginPassword', this)" style="position: absolute; right: 12px; left: auto; cursor: pointer;"></i>
           </div>
         </div>
 
@@ -314,6 +336,7 @@
           <div class="input-wrapper">
             <i class="fas fa-key"></i>
             <input type="password" id="signupPassword" placeholder="••••••••" required minlength="6">
+            <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('signupPassword', this)" style="position: absolute; right: 12px; left: auto; cursor: pointer;"></i>
           </div>
         </div>
 
@@ -322,6 +345,7 @@
           <div class="input-wrapper">
             <i class="fas fa-check-double"></i>
             <input type="password" id="signupConfirm" placeholder="••••••••" required>
+            <i class="fas fa-eye toggle-password" onclick="togglePasswordVisibility('signupConfirm', this)" style="position: absolute; right: 12px; left: auto; cursor: pointer;"></i>
           </div>
         </div>
 
@@ -339,18 +363,44 @@
       <h2>Welcome back, <span id="userEmailDisplay"></span></h2>
       <button onclick="logout()" style="background:none; border:none; color:var(--primary-color); font-weight:600; cursor:pointer;">Logout</button>
     </div>
-    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px;">
+    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:20px;">
       <div style="padding:20px; border:1px solid var(--border); border-radius:8px;">
         <p style="color:var(--text-muted); font-size:14px;">Total Files</p>
         <p style="font-size:24px; font-weight:700;">0</p>
       </div>
       <div style="padding:20px; border:1px solid var(--border); border-radius:8px;">
         <p style="color:var(--text-muted); font-size:14px;">API Keys</p>
-        <p style="font-size:24px; font-weight:700;">0</p>
+        <p style="font-size:24px; font-weight:700;" id="apiKeyCount">0</p>
+      </div>
+      <div style="padding:20px; border:1px solid var(--border); border-radius:8px;">
+        <p style="color:var(--text-muted); font-size:14px;">Plan</p>
+        <p style="font-size:24px; font-weight:700;" id="userPlan">FREE</p>
       </div>
       <div style="padding:20px; border:1px solid var(--border); border-radius:8px;">
         <p style="color:var(--text-muted); font-size:14px;">Storage Used</p>
         <p style="font-size:24px; font-weight:700;">0 KB</p>
+      </div>
+    </div>
+
+    <!-- API Key Management Section -->
+    <div style="margin-top: 40px; padding: 24px; border: 1px solid var(--border); border-radius: 12px; background: #fafafa;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+        <h3 style="color:var(--text-main); font-size:18px;">API Keys</h3>
+        <button onclick="generateApiKey()" class="btn-primary" style="width:auto; padding:10px 20px; margin-bottom:0;">
+          <i class="fas fa-plus"></i> Generate Key
+        </button>
+      </div>
+      
+      <div id="newKeyAlert" class="success" style="padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dcfce7; background: #f0fdf4; color: #166534; display:none;">
+        <p style="font-weight:600; font-size:14px; margin-bottom:5px;">New API Key Created!</p>
+        <p style="font-size:12px; margin-bottom:10px; color:#15803d;">Copy it now, it won't be shown again.</p>
+        <code id="newApiKeyRaw" style="display:block; background:#fff; padding:10px; border-radius:6px; border:1.5px dashed #4ade80; font-size:14px; font-weight:700; color:#111827; margin-bottom:10px; word-break:break-all;"></code>
+        <button onclick="copyToClipboard('newApiKeyRaw')" style="background:none; border:none; color:var(--primary-color); font-weight:600; cursor:pointer; font-size:13px;">Copy to Clipboard</button>
+      </div>
+
+      <div id="keysList">
+        <!-- Masked keys will appear here -->
+        <p style="color:var(--text-muted); font-size:14px; text-align:center;">No API keys yet. Create one to start using the SDK.</p>
       </div>
     </div>
   </div>
@@ -358,16 +408,43 @@
   <script>
     const API_URL = 'http://localhost:3000/api';
     let currentToken = localStorage.getItem('token');
+    let apiKeys = [];
 
     function toggleAuth() {
-      document.getElementById('loginView').classList.toggle('hidden');
-      document.getElementById('signupView').classList.toggle('hidden');
+      const login = document.getElementById('loginView');
+      const signup = document.getElementById('signupView');
+      
+      if (login.classList.contains('hidden') || login.style.display === 'none') {
+        login.style.display = 'block';
+        login.classList.remove('hidden');
+        signup.style.display = 'none';
+        signup.classList.add('hidden');
+      } else {
+        login.style.display = 'none';
+        login.classList.add('hidden');
+        signup.style.display = 'block';
+        signup.classList.remove('hidden');
+      }
       hideErrors();
     }
 
     function hideErrors() {
       document.getElementById('errorMsg').style.display = 'none';
       document.getElementById('signupErrorMsg').style.display = 'none';
+    }
+
+    // Toggle Password Visibility
+    function togglePasswordVisibility(inputId, icon) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
     }
 
     function showError(id, msg) {
@@ -382,6 +459,7 @@
       hideErrors();
       const email = document.getElementById('loginEmail').value;
       const password = document.getElementById('loginPassword').value;
+      const keepLoggedIn = document.getElementById('keepLoggedIn').checked;
 
       try {
         const res = await fetch(`${API_URL}/auth/login`, {
@@ -391,8 +469,15 @@
         });
         const data = await res.json();
         if (res.ok) {
-          localStorage.setItem('token', data.session.access_token);
-          window.location.reload();
+          const token = data.session.access_token;
+          if (keepLoggedIn) {
+            localStorage.setItem('token', token);
+          } else {
+            sessionStorage.setItem('token', token);
+          }
+          // Set currentToken globally so showDashboard works during same session
+          currentToken = token;
+          showDashboard(data.developer || { email });
         } else {
           showError('errorMsg', data.error);
         }
@@ -434,79 +519,105 @@
     });
 
     // Session check
-    if (currentToken) {
+    const storedToken = localStorage.getItem('token') || sessionStorage.getItem('token');
+    
+    function hideSkeleton() {
+      document.getElementById('skeletonLoader').style.display = 'none';
+      document.getElementById('loginView').style.display = 'block';
+    }
+
+    if (storedToken) {
+      currentToken = storedToken;
       fetch(`${API_URL}/auth/me`, {
         headers: { 'Authorization': `Bearer ${currentToken}` }
       }).then(res => res.json()).then(data => {
         if (data.developer) {
-          document.getElementById('authCard').style.display = 'none';
-          document.getElementById('dashboard').style.display = 'block';
-          document.getElementById('userEmailDisplay').textContent = data.developer.email;
+          showDashboard(data.developer);
         } else {
+          hideSkeleton();
           localStorage.removeItem('token');
+          sessionStorage.removeItem('token');
         }
+      }).catch(() => {
+        hideSkeleton();
+      });
+    } else {
+      hideSkeleton();
+    }
+
+    // Show dashboard
+    function showDashboard(developer) {
+      document.getElementById('authCard').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      document.getElementById('userEmailDisplay').textContent = developer.email;
+      fetchApiKeys();
+    }
+
+    async function fetchApiKeys() {
+      try {
+        const res = await fetch(`${API_URL}/keys`, {
+          headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          renderKeysList(data.keys);
+          document.getElementById('apiKeyCount').textContent = data.keys.length;
+        }
+      } catch (err) {
+        console.error('Failed to fetch keys');
+      }
+    }
+
+    function renderKeysList(keys) {
+      const listEl = document.getElementById('keysList');
+      if (!keys || keys.length === 0) {
+        listEl.innerHTML = '<p style="color:var(--text-muted); font-size:14px; text-align:center;">No API keys yet. Create one to start using the SDK.</p>';
+        return;
+      }
+
+      listEl.innerHTML = keys.map(k => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; border:1px solid var(--border); border-radius:8px; margin-bottom:10px; background:white;">
+          <div>
+            <p style="font-family:monospace; font-weight:700; color:#374151;">${k.key_prefix}••••••••••••••••••••••••</p>
+            <p style="color:var(--text-muted); font-size:12px; margin-top:5px;">Created: ${new Date(k.created_at).toLocaleDateString()}</p>
+          </div>
+          <span style="padding:4px 10px; background:#dcfce7; color:#166534; font-size:12px; font-weight:700; border-radius:100px;">Active</span>
+        </div>
+      `).join('');
+    }
+
+    async function generateApiKey() {
+      try {
+        const res = await fetch(`${API_URL}/keys/generate`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const alertEl = document.getElementById('newKeyAlert');
+          const codeEl = document.getElementById('newApiKeyRaw');
+          codeEl.textContent = data.apiKey;
+          alertEl.style.display = 'block';
+          fetchApiKeys(); // Refresh list
+        } else {
+          alert('Failed to generate key: ' + data.error);
+        }
+      } catch (err) {
+        alert('Network error generating key');
+      }
+    }
+
+    function copyToClipboard(elementId) {
+      const text = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Copied to clipboard!');
       });
     }
 
     function logout() {
       localStorage.removeItem('token');
+      sessionStorage.removeItem('token');
       window.location.reload();
-    }
-  </script>
-</body>
-</html>
-          headers: {
-            'Authorization': `Bearer ${currentToken}`
-          }
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          showDashboard(data.developer);
-        } else {
-          localStorage.removeItem('token');
-          currentToken = null;
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-      }
-    }
-
-    // Show dashboard
-    function showDashboard(developer) {
-      document.getElementById('authContainer').style.display = 'none';
-      document.getElementById('dashboard').style.display = 'block';
-      
-      document.getElementById('userEmail').textContent = developer.email;
-      document.getElementById('userPlan').textContent = developer.plan.toUpperCase();
-    }
-
-    // Logout
-    function logout() {
-      localStorage.removeItem('token');
-      currentToken = null;
-      document.getElementById('authContainer').style.display = 'block';
-      document.getElementById('dashboard').style.display = 'none';
-      document.getElementById('loginForm').reset();
-      hideMessages();
-    }
-
-    // Helper functions
-    function showError(message) {
-      const errorEl = document.getElementById('errorMsg');
-      errorEl.textContent = message;
-      errorEl.style.display = 'block';
-    }
-
-    function showSuccess(message) {
-      const successEl = document.getElementById('successMsg');
-      successEl.textContent = message;
-      successEl.style.display = 'block';
-    }
-
-    function hideMessages() {
-      document.getElementById('errorMsg').style.display = 'none';
-      document.getElementById('successMsg').style.display = 'none';
     }
   </script>
 </body>

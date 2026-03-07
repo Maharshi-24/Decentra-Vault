@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { supabase } from './config/supabase.js';
 import authRoutes from './routes/auth.js';
+import keyRoutes from './routes/keys.js';
+import fileRoutes from './routes/files.js';
 
 dotenv.config();
 
@@ -16,6 +18,8 @@ app.use(express.static('public')); // Serve frontend
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/keys', keyRoutes);
+app.use('/api/files', fileRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
