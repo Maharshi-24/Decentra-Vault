@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import crypto from 'crypto';
+import FormData from 'form-data';
 import { authenticateApiKey } from '../middleware/auth.js';
 import { supabase } from '../config/supabase.js';
 
@@ -15,6 +16,43 @@ const upload = multer({
 // Master key from env (32-byte hex → Buffer)
 const MASTER_KEY = Buffer.from(process.env.MASTER_ENCRYPTION_KEY, 'hex');
 const MASTER_KEY_VERSION = parseInt(process.env.MASTER_KEY_VERSION || '1');
+const PINATA_JWT = process.env.PINATA_JWT;
+const PINATA_GATEWAY = 'https://gateway.pinata.cloud/ipfs';
+
+/**
+ * Upload an encrypted file buffer to Pinata (IPFS).
+ * Returns the CID string.
+ */
+async function uploadToPinata(fileBuffer, originalName) {
+  const form = new FormData();
+  form.append('file', fileBuffer, {
+    filename: `enc_${originalName}`,
+    contentType: 'application/octet-stream'
+  });
+
+  const metadata = JSON.stringify({ name: `dv_${Date.now()}_${originalName}` });
+  form.append('pinataMetadata', metadata);
+
+  const options = JSON.stringify({ cidVersion: 1 });
+  form.append('pinataOptions', options);
+
+  const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${PINATA_JWT}`,
+      ...form.getHeaders()
+    },
+    body: form
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Pinata upload failed: ${err}`);
+  }
+
+  const result = await response.json();
+  return result.IpfsHash; // The CID
+}
 
 /**
  * Encrypt a Buffer with AES-256-GCM.
@@ -62,15 +100,16 @@ router.post('/upload', authenticateApiKey, upload.single('file'), async (req, re
     //    Store this in file_keys — the raw fileKey is NEVER persisted.
     const { ciphertext: encryptedKey, iv: keyIv, authTag: keyAuthTag } = aesEncrypt(fileKey, MASTER_KEY);
 
-    // ── 5. Simulate IPFS CID (replaced with real Pinata in Step 5) ───────────
-    const simulatedCid = `dv_sim_${crypto.randomBytes(16).toString('hex')}`;
+    // ── 5. Upload encrypted file to Pinata (IPFS) ────────────────────────────
+    //    We upload the ENCRYPTED bytes — plaintext never leaves the server.
+    const cid = await uploadToPinata(encryptedFile, file.originalname);
 
     // ── 6. Store file metadata ─────────────────────────────────────────────────
     const { data: fileRecord, error: dbError } = await supabase
       .from('files')
       .insert({
         developer_id: developerId,
-        cid: simulatedCid,
+        cid: cid,
         hash: fileHash,
         original_name: file.originalname,
         mime_type: file.mimetype,
@@ -102,11 +141,11 @@ router.post('/upload', authenticateApiKey, upload.single('file'), async (req, re
     }
 
     res.status(201).json({
-      message: 'File encrypted and recorded successfully',
+      message: 'File encrypted and uploaded to IPFS successfully',
       fileId: fileRecord.file_id,
       hash: fileHash,
-      cid: simulatedCid,
-      note: 'CID is simulated — real IPFS upload comes in Step 5'
+      cid: cid,
+      ipfsUrl: `${PINATA_GATEWAY}/${cid}`
     });
 
   } catch (error) {
