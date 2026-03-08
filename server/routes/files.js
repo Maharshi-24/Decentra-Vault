@@ -1,7 +1,6 @@
 import express from 'express';
 import multer from 'multer';
 import crypto from 'crypto';
-import FormData from 'form-data';
 import { ethers } from 'ethers';
 import { authenticateApiKey } from '../middleware/auth.js';
 import { supabase } from '../config/supabase.js';
@@ -28,26 +27,25 @@ console.log(`[Blockchain] Anchor wallet ready: ${anchorWallet.address}`);
 
 /**
  * Upload an encrypted file buffer to Pinata (IPFS).
+ * Uses Node.js native FormData + Blob (compatible with native fetch).
  * Returns the CID string.
  */
-async function uploadToPinata(fileBuffer, originalName) {
+async function uploadToPinata(fileBuffer, fileHash) {
+  // Use native Blob + FormData — no npm form-data package needed
+  const blob = new Blob([fileBuffer], { type: 'application/octet-stream' });
   const form = new FormData();
-  form.append('file', fileBuffer, {
-    filename: `enc_${originalName}`,
-    contentType: 'application/octet-stream'
-  });
 
-  const metadata = JSON.stringify({ name: `dv_${Date.now()}_${originalName}` });
-  form.append('pinataMetadata', metadata);
+  // Use the SHA-256 hash as filename — original name NEVER sent to Pinata
+  // Pinata only sees an opaque hex string. No metadata reveals what the file is.
+  form.append('file', blob, fileHash);
+  form.append('pinataMetadata', JSON.stringify({ name: fileHash }));
+  form.append('pinataOptions', JSON.stringify({ cidVersion: 1 }));
 
-  const options = JSON.stringify({ cidVersion: 1 });
-  form.append('pinataOptions', options);
-
+  // Do NOT set Content-Type manually — fetch sets it automatically with the correct boundary
   const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${PINATA_JWT}`,
-      ...form.getHeaders()
+      Authorization: `Bearer ${PINATA_JWT}`
     },
     body: form
   });
@@ -139,8 +137,8 @@ router.post('/upload', authenticateApiKey, upload.single('file'), async (req, re
     const { ciphertext: encryptedKey, iv: keyIv, authTag: keyAuthTag } = aesEncrypt(fileKey, MASTER_KEY);
 
     // ── 5. Upload encrypted file to Pinata (IPFS) ────────────────────────────
-    //    We upload the ENCRYPTED bytes — plaintext never leaves the server.
-    const cid = await uploadToPinata(encryptedFile, file.originalname);
+    //    Filename = SHA-256 hash only — original name stays in our DB, never in Pinata
+    const cid = await uploadToPinata(encryptedFile, fileHash);
 
     // ── 6. Store file metadata ─────────────────────────────────────────────────
     const { data: fileRecord, error: dbError } = await supabase
