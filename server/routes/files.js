@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import crypto from 'crypto';
 import FormData from 'form-data';
+import { ethers } from 'ethers';
 import { authenticateApiKey } from '../middleware/auth.js';
 import { supabase } from '../config/supabase.js';
 
@@ -18,6 +19,12 @@ const MASTER_KEY = Buffer.from(process.env.MASTER_ENCRYPTION_KEY, 'hex');
 const MASTER_KEY_VERSION = parseInt(process.env.MASTER_KEY_VERSION || '1');
 const PINATA_JWT = process.env.PINATA_JWT;
 const PINATA_GATEWAY = 'https://gateway.pinata.cloud/ipfs';
+
+// ── Blockchain setup (Polygon Amoy testnet) ────────────────────────────────
+const polygonProvider = new ethers.JsonRpcProvider(process.env.POLYGON_AMOY_RPC);
+const anchorWallet = new ethers.Wallet(process.env.WALLET_PRIVATE_KEY, polygonProvider);
+
+console.log(`[Blockchain] Anchor wallet ready: ${anchorWallet.address}`);
 
 /**
  * Upload an encrypted file buffer to Pinata (IPFS).
@@ -71,12 +78,43 @@ function aesEncrypt(buffer, key) {
 }
 
 /**
+ * Anchor a SHA-256 file hash on Polygon Amoy.
+ * Sends a self-transaction with the hash encoded in the data field.
+ * Non-blocking — updates the DB with blockchain_tx + status when done.
+ */
+async function anchorOnChain(fileId, hash) {
+  try {
+    console.log(`[Blockchain] Anchoring file ${fileId} with hash ${hash}...`);
+
+    const tx = await anchorWallet.sendTransaction({
+      to: anchorWallet.address,   // self-send (lowest cost)
+      value: 0n,
+      data: '0x' + hash           // SHA-256 hash embedded in tx data
+    });
+
+    console.log(`[Blockchain] Tx submitted: ${tx.hash} — waiting for confirmation...`);
+
+    const receipt = await tx.wait(1); // wait for 1 block confirmation
+
+    await supabase
+      .from('files')
+      .update({ blockchain_tx: receipt.hash, blockchain_status: 'confirmed' })
+      .eq('file_id', fileId);
+
+    console.log(`[Blockchain] ✅ Confirmed: ${receipt.hash}`);
+  } catch (err) {
+    console.error(`[Blockchain] ❌ Anchoring failed for ${fileId}:`, err.message);
+    await supabase
+      .from('files')
+      .update({ blockchain_status: 'failed' })
+      .eq('file_id', fileId);
+  }
+}
+
+/**
  * POST /api/files/upload
  * Authenticated via x-api-key header.
  * Accepts multipart/form-data with a "file" field.
- *
- * Step 4: AES-256-GCM file encryption + file_keys storage.
- * Step 5 (next): Replace simulatedCid with real Pinata IPFS upload.
  */
 router.post('/upload', authenticateApiKey, upload.single('file'), async (req, res) => {
   try {
@@ -113,7 +151,8 @@ router.post('/upload', authenticateApiKey, upload.single('file'), async (req, re
         hash: fileHash,
         original_name: file.originalname,
         mime_type: file.mimetype,
-        size_bytes: file.size
+        size_bytes: file.size,
+        blockchain_status: 'pending'
       })
       .select()
       .single();
@@ -140,13 +179,18 @@ router.post('/upload', authenticateApiKey, upload.single('file'), async (req, re
       return res.status(500).json({ error: 'Failed to store encryption key' });
     }
 
+    // Respond immediately — blockchain anchoring runs in the background
     res.status(201).json({
       message: 'File encrypted and uploaded to IPFS successfully',
       fileId: fileRecord.file_id,
       hash: fileHash,
       cid: cid,
-      ipfsUrl: `${PINATA_GATEWAY}/${cid}`
+      ipfsUrl: `${PINATA_GATEWAY}/${cid}`,
+      blockchain_status: 'pending'
     });
+
+    // ── 8. Anchor hash on Polygon Amoy (non-blocking, fire-and-forget) ────────
+    anchorOnChain(fileRecord.file_id, fileHash);
 
   } catch (error) {
     console.error('File Upload Error:', error);
@@ -181,7 +225,7 @@ router.get('/:id', authenticateApiKey, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('files')
-      .select('file_id, original_name, mime_type, size_bytes, hash, cid, blockchain_tx, created_at')
+      .select('file_id, original_name, mime_type, size_bytes, hash, cid, blockchain_tx, blockchain_status, created_at')
       .eq('file_id', req.params.id)
       .eq('developer_id', req.developerId)
       .single();
