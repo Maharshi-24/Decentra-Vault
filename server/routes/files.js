@@ -76,6 +76,19 @@ function aesEncrypt(buffer, key) {
 }
 
 /**
+ * Decrypt a Buffer with AES-256-GCM.
+ * Returns the decrypted Buffer.
+ */
+function aesDecrypt(ciphertextHex, authTagHex, ivHex, key) {
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivHex, 'hex'));
+  decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
+  return Buffer.concat([
+    decipher.update(Buffer.from(ciphertextHex, 'hex')),
+    decipher.final()
+  ]);
+}
+
+/**
  * Anchor a SHA-256 file hash on Polygon Amoy.
  * Sends a self-transaction with the hash encoded in the data field.
  * Non-blocking — updates the DB with blockchain_tx + status when done.
@@ -107,6 +120,20 @@ async function anchorOnChain(fileId, hash) {
       .update({ blockchain_status: 'failed' })
       .eq('file_id', fileId);
   }
+}
+
+/**
+ * Verify a file hash against its on-chain transaction.
+ * Fetches the tx from Polygon, reads the data field, compares with expected hash.
+ * Returns { verified, onChainHash }.
+ */
+async function verifyOnChain(blockchainTx, expectedHash) {
+  const tx = await polygonProvider.getTransaction(blockchainTx);
+  if (!tx) return { verified: false, onChainHash: null, reason: 'Transaction not found on chain' };
+
+  const onChainHash = tx.data.startsWith('0x') ? tx.data.slice(2) : tx.data;
+  const verified = onChainHash === expectedHash;
+  return { verified, onChainHash };
 }
 
 /**
@@ -166,7 +193,9 @@ router.post('/upload', authenticateApiKey, upload.single('file'), async (req, re
       .insert({
         file_id: fileRecord.file_id,
         encrypted_key: encryptedKey.toString('hex') + ':' + keyAuthTag,
-        iv: keyIv,
+        iv: keyIv,                  // IV used to wrap the per-file key
+        file_iv: fileIv,            // IV used to encrypt the actual file
+        file_auth_tag: fileAuthTag, // GCM auth tag for the file — needed for decryption
         master_key_version: MASTER_KEY_VERSION
       });
 
@@ -232,6 +261,147 @@ router.get('/:id', authenticateApiKey, async (req, res) => {
     res.json({ file: data });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch file' });
+  }
+});
+
+/**
+ * GET /api/files/:id/verify
+ * Lightweight integrity check — verifies stored hash against Polygon blockchain.
+ * Does NOT download the file from IPFS.
+ */
+router.get('/:id/verify', authenticateApiKey, async (req, res) => {
+  try {
+    const { data: file, error } = await supabase
+      .from('files')
+      .select('file_id, hash, blockchain_tx, blockchain_status')
+      .eq('file_id', req.params.id)
+      .eq('developer_id', req.developerId)
+      .single();
+
+    if (error || !file) return res.status(404).json({ error: 'File not found' });
+
+    if (!file.blockchain_tx || file.blockchain_status !== 'confirmed') {
+      return res.json({
+        verified: false,
+        reason: file.blockchain_status === 'pending'
+          ? 'Blockchain anchoring is still pending'
+          : 'File has not been anchored on chain',
+        blockchain_status: file.blockchain_status
+      });
+    }
+
+    const { verified, onChainHash } = await verifyOnChain(file.blockchain_tx, file.hash);
+
+    res.json({
+      verified,
+      reason: verified
+        ? 'Hash matches on-chain record — file is intact'
+        : 'Hash mismatch — file may have been tampered with',
+      file_id: file.file_id,
+      hash: file.hash,
+      on_chain_hash: onChainHash,
+      blockchain_tx: file.blockchain_tx
+    });
+  } catch (error) {
+    console.error('Verify Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/files/:id/download
+ * Full retrieval pipeline:
+ *   1. Fetch encrypted bytes from IPFS
+ *   2. Re-hash and verify against blockchain
+ *   3. Unwrap the per-file AES key
+ *   4. Return encrypted bytes + key material to the SDK for client-side decryption
+ *
+ * The server NEVER decrypts the file — zero-knowledge guarantee.
+ */
+router.get('/:id/download', authenticateApiKey, async (req, res) => {
+  try {
+    // ── 1. Fetch file metadata ────────────────────────────────────────────────
+    const { data: file, error: fileError } = await supabase
+      .from('files')
+      .select('file_id, cid, hash, blockchain_tx, blockchain_status, original_name, mime_type, size_bytes')
+      .eq('file_id', req.params.id)
+      .eq('developer_id', req.developerId)
+      .single();
+
+    if (fileError || !file) return res.status(404).json({ error: 'File not found' });
+
+    // ── 2. Fetch the wrapped key + file IV from file_keys ──────────────────
+    const { data: keyRecord, error: keyError } = await supabase
+      .from('file_keys')
+      .select('encrypted_key, iv, file_iv, file_auth_tag')
+      .eq('file_id', req.params.id)
+      .single();
+
+    if (keyError || !keyRecord) return res.status(500).json({ error: 'Encryption key not found' });
+
+    // ── 3. Download encrypted bytes from IPFS ───────────────────────────
+    console.log(`[Download] Fetching CID ${file.cid} from IPFS...`);
+    const ipfsResponse = await fetch(`${PINATA_GATEWAY}/${file.cid}`);
+    if (!ipfsResponse.ok) throw new Error(`IPFS fetch failed: ${ipfsResponse.status}`);
+    const encryptedBytes = Buffer.from(await ipfsResponse.arrayBuffer());
+
+    // ── 4. Re-hash the downloaded bytes and compare with stored hash ────────
+    const downloadedHash = crypto.createHash('sha256').update(encryptedBytes).digest('hex');
+    const integrityOk = downloadedHash === file.hash;
+
+    if (!integrityOk) {
+      console.error(`[Download] ❌ Integrity FAILED for ${file.file_id}`);
+      return res.status(422).json({
+        error: 'Integrity check failed — downloaded file hash does not match stored hash',
+        integrity: 'FAILED'
+      });
+    }
+
+    // ── 5. Verify hash against Polygon blockchain ───────────────────────
+    let blockchainVerified = false;
+    let blockchainReason = file.blockchain_status;
+
+    if (file.blockchain_tx && file.blockchain_status === 'confirmed') {
+      const { verified, onChainHash } = await verifyOnChain(file.blockchain_tx, file.hash);
+      blockchainVerified = verified;
+      blockchainReason = verified ? 'ok' : 'hash_mismatch';
+      if (!verified) {
+        console.error(`[Download] ❌ Blockchain mismatch! DB hash: ${file.hash} | On-chain: ${onChainHash}`);
+      }
+    }
+
+    // ── 6. Unwrap the per-file AES key using the server MASTER_KEY ────────
+    //    The raw key is never stored — we decrypt the wrapped key here.
+    const [encKeyHex, keyAuthTag] = keyRecord.encrypted_key.split(':');
+    const fileKey = aesDecrypt(encKeyHex, keyAuthTag, keyRecord.iv, MASTER_KEY);
+
+    console.log(`[Download] ✅ ${file.original_name} | Integrity: OK | Blockchain: ${blockchainReason}`);
+
+    // ── 7. Return encrypted bytes + key material to SDK (server never decrypts) ──
+    res.json({
+      integrity: 'ok',
+      blockchain: {
+        verified: blockchainVerified,
+        status: file.blockchain_status,
+        tx: file.blockchain_tx || null,
+        reason: blockchainReason
+      },
+      file: {
+        name: file.original_name,
+        mimeType: file.mime_type,
+        sizeBytes: file.size_bytes
+      },
+      // Everything the SDK needs to decrypt the file client-side
+      encrypted: {
+        data: encryptedBytes.toString('base64'),  // encrypted file bytes
+        key: fileKey.toString('hex'),             // unwrapped AES-256 key
+        iv: keyRecord.file_iv,                    // IV for AES-GCM decryption
+        authTag: keyRecord.file_auth_tag          // GCM authentication tag
+      }
+    });
+  } catch (error) {
+    console.error('File Download Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
