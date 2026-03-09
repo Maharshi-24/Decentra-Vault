@@ -5,6 +5,7 @@ dist/
 *.log
 DecentraVault.md
 DecentraVault.txt
-test_step8.txt
-test_step8.mjs
+test_*.mjs
+test_*.txt
+downloaded_*.txt
 sdk/

@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: decentravault-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: MASTER_ENCRYPTION_KEY
+        sync: false
+      - key: MASTER_KEY_VERSION
+        sync: false
+      - key: PINATA_API_KEY
+        sync: false
+      - key: PINATA_API_SECRET
+        sync: false
+      - key: PINATA_JWT
+        sync: false
+      - key: POLYGON_AMOY_RPC
+        value: https://rpc-amoy.polygon.technology
+      - key: WALLET_PRIVATE_KEY
+        sync: false
+      - key: WALLET_ADDRESS
+        sync: false
