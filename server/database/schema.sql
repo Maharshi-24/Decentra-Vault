@@ -29,17 +29,23 @@ CREATE TABLE IF NOT EXISTS files (
   developer_id UUID NOT NULL REFERENCES developers(id) ON DELETE CASCADE,
   cid TEXT NOT NULL, -- IPFS Content Identifier
   hash TEXT NOT NULL, -- SHA-256 of encrypted file
-  merkle_proof JSONB, -- Sibling hashes for Merkle verification
-  merkle_root TEXT, -- On-chain Merkle root
-  blockchain_tx TEXT, -- Blockchain transaction reference
+  original_name TEXT NOT NULL, -- Original filename (encrypted in storage, visible in metadata)
+  mime_type TEXT NOT NULL, -- MIME type (e.g., 'application/pdf', 'image/jpeg')
+  size_bytes INTEGER NOT NULL, -- Original file size in bytes
+  blockchain_tx TEXT, -- Blockchain transaction hash
+  blockchain_status TEXT NOT NULL DEFAULT 'pending' CHECK (blockchain_status IN ('pending', 'confirmed', 'failed')),
+  merkle_proof JSONB, -- Sibling hashes for Merkle verification (Phase 2)
+  merkle_root TEXT, -- On-chain Merkle root (Phase 2)
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- File Keys table (encryption keys wrapped with master key)
 CREATE TABLE IF NOT EXISTS file_keys (
   file_id UUID PRIMARY KEY REFERENCES files(file_id) ON DELETE CASCADE,
-  encrypted_key TEXT NOT NULL, -- File key wrapped with server master key
-  iv TEXT NOT NULL, -- Initialization vector for AES-256-GCM
+  encrypted_key TEXT NOT NULL, -- File key wrapped with server master key (includes authTag)
+  iv TEXT NOT NULL, -- IV used to wrap the per-file key (for master key encryption)
+  file_iv TEXT NOT NULL, -- IV used to encrypt the actual file content
+  file_auth_tag TEXT NOT NULL, -- GCM authentication tag for file decryption
   master_key_version INTEGER NOT NULL DEFAULT 1, -- Enables key rotation
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

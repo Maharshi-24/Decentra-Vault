@@ -9,3 +9,4 @@ test_*.mjs
 test_*.txt
 downloaded_*.txt
 sdk/
+sdk-python/
